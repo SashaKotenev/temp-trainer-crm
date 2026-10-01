@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {seedSports,validateSports} from './sports.mjs';
+import {seedSports,validateSports,ensureSports,previousFocus} from './sports.mjs';
 import {materials,filterMaterials,validateKnowledge} from './knowledge.mjs';
 import {seed,validate,balance,paid,schedule,complete,payment,convert} from './core.mjs';
 const s=seed(),p=s.packages[0];
@@ -30,4 +30,8 @@ const filters={sport:'swim',type:'template',query:'кроль',favorites:false};
 s.knowledge={custom:[],favorites:['kb-run-1']};assert.doesNotThrow(()=>validate(s));assert.equal(filterMaterials(s,{sport:'all',type:'all',query:'',favorites:true}).length,1);
 assert.throws(()=>validateKnowledge({custom:[],favorites:['missing']}));
 const badMaterial={...materials[0],id:'custom',source:'javascript:alert(1)'};assert.throws(()=>validateKnowledge({custom:[badMaterial],favorites:[]}));
-assert.equal(materials.filter(x=>x.type==='exercise').length,6);console.log('Passed: library search/filter, favorites references, untrusted source rejected.');
+assert.equal(materials.filter(x=>x.type==='exercise').length,7);console.log('Passed: library search/filter, favorites references, untrusted source rejected.');
+
+const legacy=seedSports();delete legacy.spaces.tennis;assert.doesNotThrow(()=>validateSports(legacy));const migrated={sports:legacy};ensureSports(migrated);assert.equal(migrated.sports.spaces.tennis.sessions.length,3);
+const a=migrated.sports.spaces.run.sessions[0];a.status='done';a.result='Серия выполнена';a.review={outcome:'changed',reason:'Изменили дистанцию',observation:'Потеря темпа',nextFocus:'Проверить темп'};assert.equal(previousFocus(migrated.sports.spaces.run.sessions,migrated.sports.spaces.run.sessions[1]).id,a.id);assert.equal(previousFocus(migrated.sports.spaces.run.sessions,a),undefined);assert.doesNotThrow(()=>validateSports(migrated.sports));a.review.reason='';assert.throws(()=>validateSports(migrated.sports));a.review.reason='Причина';a.status='skipped';a.review.outcome='skipped';assert.doesNotThrow(()=>validateSports(migrated.sports));
+const own={...materials[0],id:'own-method',method:{levels:'L1',technique:'Критерий',mistakes:'Ошибка',easier:'Упростить',video:'javascript:alert(1)'}};assert.throws(()=>validateKnowledge({custom:[own],favorites:[]}));own.method.video='https://example.com/video';assert.doesNotThrow(()=>validateKnowledge({custom:[own],favorites:[]}));console.log('Passed: legacy migration, chronological training memory, review consistency, safe video links.');
