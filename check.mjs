@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import {seedSports,validateSports} from './sports.mjs';
 import {seed,validate,balance,paid,schedule,complete,payment,convert} from './core.mjs';
 const s=seed(),p=s.packages[0];
 assert.equal(balance(s,p),1);
@@ -19,3 +20,8 @@ assert.doesNotThrow(()=>validate(s));
 const broken=structuredClone(s);broken.sessions[0].clientId='unknown';assert.throws(()=>validate(broken));
 const invalidDate=structuredClone(s);invalidDate.packages[0].date='2026-02-30';assert.throws(()=>validate(invalidDate));
 console.log('Passed: package balance, no double completion/overdraft, restoration, scheduling conflicts, exact payments, idempotent lead conversion, import references/dates.');
+const sport=seedSports();assert.doesNotThrow(()=>validateSports(sport));s.sports=sport;assert.doesNotThrow(()=>validate(s));
+const badSport=structuredClone(sport);badSport.spaces.run.sessions[0].volume=-1;assert.throws(()=>validateSports(badSport));
+const missingResult=structuredClone(sport);missingResult.spaces.swim.sessions[0].status='done';assert.throws(()=>validateSports(missingResult));
+const badSportDate=structuredClone(sport);badSportDate.spaces.football.sessions[0].date='2026-02-30';assert.throws(()=>validateSports(badSportDate));
+console.log('Passed: sports import validation, negative volume, missing results, invalid dates.');

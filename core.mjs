@@ -1,3 +1,4 @@
+import {validateSports} from './sports.mjs';
 export const DAY='2026-10-01';
 export const id=()=>crypto.randomUUID();
 export const balance=(s,p)=>p.count-s.sessions.filter(x=>x.packageId===p.id&&x.status==='done').length;
@@ -29,6 +30,7 @@ export function validate(s){
  for(const x of s.leads)if(!string(x.name,80)||!x.name.trim()||!string(x.contact,120)||!string(x.goal)||!string(x.source,80)||!['new','contact','trial','won','lost'].includes(x.stage)||!date(x.date)||(x.clientId!==null&&!cs.has(x.clientId)))fail();
  for(const x of s.tasks)if(!string(x.text,300)||!x.text.trim()||!date(x.date)||typeof x.done!=='boolean'||(x.clientId!==null&&!cs.has(x.clientId)))fail();
  for(const x of s.audit)if(!x||!string(x.text,400)||!string(x.at,50))fail();
+ if(s.sports!==undefined)validateSports(s.sports);
  return s;
 }
 export function schedule(s,input,editingId=null){
