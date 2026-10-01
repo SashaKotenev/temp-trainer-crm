@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import {seedSports,validateSports} from './sports.mjs';
+import {materials,filterMaterials,validateKnowledge} from './knowledge.mjs';
 import {seed,validate,balance,paid,schedule,complete,payment,convert} from './core.mjs';
 const s=seed(),p=s.packages[0];
 assert.equal(balance(s,p),1);
@@ -25,3 +26,8 @@ const badSport=structuredClone(sport);badSport.spaces.run.sessions[0].volume=-1;
 const missingResult=structuredClone(sport);missingResult.spaces.swim.sessions[0].status='done';assert.throws(()=>validateSports(missingResult));
 const badSportDate=structuredClone(sport);badSportDate.spaces.football.sessions[0].date='2026-02-30';assert.throws(()=>validateSports(badSportDate));
 console.log('Passed: sports import validation, negative volume, missing results, invalid dates.');
+const filters={sport:'swim',type:'template',query:'кроль',favorites:false};assert.equal(filterMaterials(s,filters).length,1);
+s.knowledge={custom:[],favorites:['kb-run-1']};assert.doesNotThrow(()=>validate(s));assert.equal(filterMaterials(s,{sport:'all',type:'all',query:'',favorites:true}).length,1);
+assert.throws(()=>validateKnowledge({custom:[],favorites:['missing']}));
+const badMaterial={...materials[0],id:'custom',source:'javascript:alert(1)'};assert.throws(()=>validateKnowledge({custom:[badMaterial],favorites:[]}));
+assert.equal(materials.filter(x=>x.type==='exercise').length,6);console.log('Passed: library search/filter, favorites references, untrusted source rejected.');

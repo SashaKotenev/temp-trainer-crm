@@ -15,13 +15,13 @@ export function validateSports(d){
  if(!d||!kinds.includes(d.active)||!d.coach||!str(d.coach.name,80)||!d.coach.name.trim()||!str(d.coach.bio,1000)||!d.spaces)fail();
  const ids=new Set();
  for(const k of kinds){const w=d.spaces[k];if(!w||!str(w.format,120)||!str(w.level,160)||!str(w.goal,200)||!str(w.notes,2000)||!Array.isArray(w.sessions)||w.sessions.length>500)fail();
- for(const x of w.sessions){if(!x||!str(x.id,80)||!x.id||ids.has(x.id)||!str(x.title,160)||!x.title.trim()||!str(x.detail,300)||!str(x.result,1000)||!['planned','done'].includes(x.status)||!Number.isFinite(x.volume)||x.volume<=0||x.volume>100000||typeof x.date!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(x.date))fail();const dt=new Date(x.date+'T12:00:00Z');if(Number.isNaN(dt.getTime())||dt.toISOString().slice(0,10)!==x.date)fail();if(x.status==='done'&&!x.result.trim())fail();ids.add(x.id);}}
+ for(const x of w.sessions){if(!x||!str(x.id,80)||!x.id||ids.has(x.id)||!str(x.title,160)||!x.title.trim()||!str(x.detail,5000)||!str(x.result,1000)||!['planned','done'].includes(x.status)||!Number.isFinite(x.volume)||x.volume<=0||x.volume>100000||typeof x.date!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(x.date))fail();const dt=new Date(x.date+'T12:00:00Z');if(Number.isNaN(dt.getTime())||dt.toISOString().slice(0,10)!==x.date)fail();if(x.status==='done'&&!x.result.trim())fail();ids.add(x.id);}}
  return d;
 }
 const data=s=>s.sports||seedSports();
-const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const btn=(text,action,id='',type='secondary')=>`<button class="button ${type}" data-action="${action}" data-id="${esc(id)}">${text}</button>`;
-const field=(label,name,value,type='text',attrs='')=>`<label>${label}<input name="${name}" value="${esc(value)}" type="${type}" ${attrs}></label>`;
+export const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+export const btn=(text,action,id='',type='secondary')=>`<button type="button" class="button ${type}" data-action="${action}" data-id="${esc(id)}">${text}</button>`;
+export const field=(label,name,value,type='text',attrs='')=>`<label>${label}<input name="${name}" value="${esc(value)}" type="${type}" ${attrs}></label>`;
 const date=d=>new Date(d+'T12:00:00Z').toLocaleDateString('ru-RU',{day:'numeric',month:'short',timeZone:'UTC'});
 function drawing(k){return k==='football'?'<rect x="15" y="15" width="250" height="170" rx="3"/><path d="M140 15V185 M15 55H55V145H15 M265 55H225V145H265"/><circle cx="140" cy="100" r="30"/><circle class="ball" cx="183" cy="72" r="5"/>':k==='swim'?'<path d="M15 35H265 M15 65H265 M15 95H265 M15 125H265 M15 155H265 M15 185H265"/><path class="ball" d="M65 80H135 M170 110H230 M90 140H190"/>':'<rect x="20" y="20" width="240" height="165" rx="80"/><rect x="35" y="35" width="210" height="135" rx="65"/><rect x="50" y="50" width="180" height="105" rx="50"/><path d="M140 50V155"/><circle class="ball" cx="210" cy="148" r="5"/>';}
 export function sportPage(s){const d=data(s),k=d.active,c=sports[k],w=d.spaces[k],ss=w.sessions.slice().sort((a,b)=>a.date.localeCompare(b.date)),total=ss.reduce((n,x)=>n+x.volume,0),done=ss.filter(x=>x.status==='done'),actual=done.reduce((n,x)=>n+x.volume,0);return `

@@ -1,5 +1,6 @@
 import {DAY,id,seed,validate,balance,paid,available,debt,schedule,complete,payment,convert} from './core.mjs';
 import {sportPage,coachPage,sportAction} from './sports.mjs';
+import {knowledgePage,knowledgeAction,knowledgeFilter} from './knowledge.mjs';
 // ponytail: localStorage holds one browser's demo; use server transactions for shared real accounts.
 const KEY='temp-crm-demo-v1', $=s=>document.querySelector(s), money=n=>new Intl.NumberFormat('ru-RU').format(n)+' ₽';
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -18,7 +19,7 @@ function change(text,fn){
  state=next;render();toast(text);
 }
 const client=id=>state.clients.find(x=>x.id===id);
-const button=(text,action,value='',style='secondary')=>`<button class="button ${style}" data-action="${action}" data-id="${esc(value)}">${text}</button>`;
+const button=(text,action,value='',style='secondary')=>`<button type="button" class="button ${style}" data-action="${action}" data-id="${esc(value)}">${text}</button>`;
 const badge=(text,type='')=>`<span class="badge ${type}">${text}</span>`;
 const person=c=>`<span class="avatar tone-${state.clients.indexOf(c)%4}">${esc(initials(c))}</span><span class="person-name"><b>${esc(c.name)}</b><small>${esc(c.goal)}</small></span>`;
 const empty=text=>`<div class="empty">${text}</div>`;
@@ -44,11 +45,11 @@ function leads(){return header('Продажи','Каждая заявка — �
 function paymentRows(rows){return rows.length?rows.slice().sort((a,b)=>b.date.localeCompare(a.date)).map(x=>{const p=state.packages.find(p=>p.id===x.packageId),c=client(p.clientId);return `<div class="payment-row"><div><a href="#client/${esc(c.id)}">${esc(c.name)}</a><span>${dateLabel(x.date)} · ${esc(x.method)}</span></div><b>${money(x.amount)}</b><button class="icon-button" data-action="payment-void" data-id="${esc(x.id)}" aria-label="Отменить запись оплаты ${esc(c.name)} на ${x.amount} рублей">×</button></div>`;}).join(''):empty('Оплат пока нет. Добавьте пакет и запишите поступление.');}
 function finance(){const total=state.payments.reduce((n,x)=>n+x.amount,0),owed=state.clients.reduce((n,c)=>n+debt(state,c.id),0);return header('Оплаты','Поступления и остатки к оплате. Это учёт, а не приём платежей.',button('+ Записать оплату','payment-new','',''))+`<div class="finance-stats"><div><span>Все записанные поступления</span><b>${money(total)}</b></div><div><span>Осталось оплатить</span><b>${money(owed)}</b></div><div><span>Пакетов с задолженностью</span><b>${state.packages.filter(p=>paid(state,p)<p.price).length}</b></div></div><div class="client-grid"><section class="panel"><div class="panel-head"><h2>Последние поступления</h2></div>${paymentRows(state.payments)}</section><section class="panel"><div class="panel-head"><h2>К оплате</h2></div>${state.clients.filter(c=>debt(state,c.id)>0).map(c=>`<div class="payment-row"><a href="#client/${esc(c.id)}">${esc(c.name)}</a><b>${money(debt(state,c.id))}</b>${button('Оплата','payment-client',c.id,'subtle')}</div>`).join('')||empty('Все пакеты оплачены.')}</section></div><details class="audit"><summary>История изменений</summary>${state.audit.map(x=>`<p><span>${esc(new Date(x.at).toLocaleString('ru-RU',{timeZone:'Europe/Moscow'}))}</span> ${esc(x.text)}</p>`).join('')||'<p>Здесь появятся ваши изменения.</p>'}</details>`;}
 function render(){const route=location.hash.slice(1)||'sport',key=route.startsWith('client/')?'clients':route;
- const nav=[['sport','↗','Подготовка'],['coach','◈','Профиль тренера'],['today','◷','Рабочий день'],['clients','◉','Клиенты'],['calendar','▦','Расписание'],['leads','↗','Продажи'],['finance','₽','Оплаты']];
+ const nav=[['sport','↗','Подготовка'],['coach','◈','Профиль тренера'],['knowledge','▤','База знаний'],['today','◷','Рабочий день'],['clients','◉','Клиенты'],['calendar','▦','Расписание'],['leads','↗','Продажи'],['finance','₽','Оплаты']];
  $('#nav').innerHTML=nav.map(([k,icon,label])=>`<a href="#${k}" class="${key===k?'active':''}" ${key===k?'aria-current="page"':''}><span aria-hidden="true">${icon}</span>${label}${k==='leads'?`<small>${state.leads.filter(l=>!['won','lost'].includes(l.stage)).length}</small>`:''}</a>`).join('');
  $('#breadcrumb').textContent='Мой кабинет / '+(nav.find(x=>x[0]===key)?.[2]||'Сегодня');
  $('#save-status').textContent=blocked?'Сохранение недоступно':'Демо · данные в браузере';
- $('#content').innerHTML=route==='sport'?sportPage(state):route==='coach'?coachPage(state):route.startsWith('client/')?clientPage(client(route.slice(7))):({today,clients,calendar,leads,finance}[route]||today)();
+ $('#content').innerHTML=route==='knowledge'?knowledgePage(state):route==='sport'?sportPage(state):route==='coach'?coachPage(state):route.startsWith('client/')?clientPage(client(route.slice(7))):({today,clients,calendar,leads,finance}[route]||today)();
 }
 function field(label,name,value='',type='text',more=''){return `<label>${label}<input name="${name}" type="${type}" value="${esc(value)}" ${more}></label>`;}
 function clientSelect(value=''){return `<label>Клиент<select name="clientId" required>${state.clients.map(c=>`<option value="${esc(c.id)}" ${c.id===value?'selected':''}>${esc(c.name)}</option>`).join('')}</select></label>`;}
@@ -66,6 +67,7 @@ document.addEventListener('click',e=>{
  if(e.target.closest('.remove-exercise')){e.target.closest('.exercise-row').remove();return;}
  const el=e.target.closest('[data-action]');if(!el)return;const key=el.dataset.action,value=el.dataset.id;
  try{
+  if(knowledgeAction(key,value,state,open,change,render))return;
   if(sportAction(key,value,state,open,change))return;
   switch(key){
    case 'client-new':clientForm();break;case 'client-edit':clientForm(value);break;
@@ -92,7 +94,10 @@ $('#form').addEventListener('submit',e=>{e.preventDefault();try{if(submitAction)
 $('#dialog-close').onclick=$('#dialog-cancel').onclick=()=>$('#dialog').close();
 document.addEventListener('change',e=>{if(e.target.id==='day'){if(e.target.value){selectedDay=e.target.value;render();}}if(e.target.dataset.lead){try{change('Этап заявки обновлён',s=>{s.leads.find(l=>l.id===e.target.dataset.lead).stage=e.target.value;});}catch(err){toast(err.message);render();}}});
 document.addEventListener('input',e=>{if(e.target.id==='client-search'){const term=e.target.value.toLowerCase().trim(),rows=[...document.querySelectorAll('[data-client-name]')];rows.forEach(r=>r.hidden=!r.dataset.clientName.includes(term));$('#search-empty').hidden=rows.some(r=>!r.hidden);}});
-$('#import-file').addEventListener('change',async e=>{const file=e.target.files[0];e.target.value='';if(!file)return;try{if(file.size>2e6)throw new Error('Файл слишком большой. Максимум 2 МБ.');const imported=validate(JSON.parse(await file.text()));if(confirm('Заменить данные в этом браузере содержимым файла? Сначала экспортируйте текущую копию.'))change('Данные импортированы',s=>{const revision=s.revision;delete s.sports;Object.assign(s,structuredClone(imported));s.revision=revision;});}catch(err){toast(err.message);}});
+$('#import-file').addEventListener('change',async e=>{const file=e.target.files[0];e.target.value='';if(!file)return;try{if(file.size>2e6)throw new Error('Файл слишком большой. Максимум 2 МБ.');const imported=validate(JSON.parse(await file.text()));if(confirm('Заменить данные в этом браузере содержимым файла? Сначала экспортируйте текущую копию.'))change('Данные импортированы',s=>{const revision=s.revision;delete s.sports;delete s.knowledge;Object.assign(s,structuredClone(imported));s.revision=revision;});}catch(err){toast(err.message);}});
 window.addEventListener('hashchange',()=>{clientTab='overview';render();window.scrollTo(0,0);});
 window.addEventListener('storage',e=>{if(e.key===KEY){state=read();render();toast('Данные обновлены из другой вкладки');}});
 render();if(blocked)toast('Не удалось прочитать сохранение. Исходная копия не перезаписана.');
+
+document.addEventListener('input',e=>knowledgeFilter(e,state));
+document.addEventListener('change',e=>knowledgeFilter(e,state));
